@@ -1,42 +1,27 @@
-import os
-import asyncio
-from dotenv import load_dotenv
-import discord
-from discord.ext import commands
-from pytube import YouTube
+import discord from discord.ext import commands import youtube_dl import os
 
-load_dotenv()
-TOKEN = os.getenv("DISCORD_TOKEN")
+TOKEN = os.getenv("DISCORD_TOKEN") or "PASTE_YOUR_TOKEN_HERE"
 
-intents = discord.Intents.default()
-intents.message_content = True
-bot = commands.Bot(command_prefix='!', intents=intents)
+intents = discord.Intents.default() bot = commands.Bot(command_prefix='!', intents=intents)
 
-@bot.event
-async def on_ready():
-    print(f'Ма бой {bot.user} подключился к Discord!')
+Настройка youtube_dl
 
-@bot.command()
-async def play(ctx, url):
-    voice_channel = ctx.author.voice.channel
-    if not voice_channel:
-        await ctx.send("Ты не в войсе, мафия!")
-        return
+ydl_opts = { 'format': 'bestaudio/best', 'postprocessors': [{ 'key': 'FFmpegExtractAudio', 'preferredcodec': 'mp3', 'preferredquality': '192', }], 'outtmpl': 'song.%(ext)s', }
 
-    vc = await voice_channel.connect()
-    yt = YouTube(url)
-    audio = yt.streams.filter(only_audio=True).first()
-    file_path = audio.download(filename="song.mp4")
+@bot.command() async def play(ctx, url): if not ctx.author.voice: await ctx.send("Йоу, мафия, ты не в голосовом канале!") return
 
-    vc.play(discord.FFmpegPCMAudio("song.mp4"), after=lambda e: print("Проигралось!"))
-    await ctx.send(f"Врубаю для тебя, браза: {yt.title}")
+channel = ctx.author.voice.channel
+voice_client = ctx.voice_client
+if not voice_client:
+    voice_client = await channel.connect()
 
-@bot.command()
-async def stop(ctx):
-    if ctx.voice_client:
-        await ctx.voice_client.disconnect()
-        await ctx.send("Музон остановлен, мафия.")
-    else:
-        await ctx.send("Я даже не в войсе, тип!")
+with youtube_dl.YoutubeDL(ydl_opts) as ydl:
+    ydl.download([url])
+
+voice_client.play(discord.FFmpegPCMAudio("song.mp3"))
+await ctx.send("Врубаю музло, брошка!")
+
+@bot.command() async def stop(ctx): if ctx.voice_client: await ctx.voice_client.disconnect() await ctx.send("Музыка остановлена, брат!")
 
 bot.run(TOKEN)
+
